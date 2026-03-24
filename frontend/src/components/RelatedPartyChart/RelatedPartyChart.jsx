@@ -1,7 +1,7 @@
 import React from 'react';
 import {
-  AreaChart,
-  Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   Tooltip,
@@ -43,13 +43,7 @@ export default function RelatedPartyChart({ data }) {
       <div className="flex-1 min-h-[200px] w-full mt-4 overflow-x-auto custom-scrollbar">
         <div className="min-w-[500px] h-full">
           <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-            <defs>
-              <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-              </linearGradient>
-            </defs>
+          <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
             <XAxis 
               dataKey="year" 
@@ -72,20 +66,19 @@ export default function RelatedPartyChart({ data }) {
               width={50}
             />
             <Tooltip
-              contentStyle={{ backgroundColor: '#111', borderColor: '#333', color: '#fff', borderRadius: '8px' }}
+              contentStyle={{ backgroundColor: '#111', borderColor: '#333', color: '#fff', borderRadius: '8px', border: 'none' }}
               itemStyle={{ color: '#ef4444', fontWeight: 'bold' }}
+              cursor={{ fill: '#222' }}
               formatter={(value) => [formatCurrency(value), 'Related Party Txns']}
               labelStyle={{ color: '#888', marginBottom: '4px' }}
             />
-            <Area
-              type="monotone"
+            <Bar
               dataKey="amount"
-              stroke="#ef4444"
-              strokeWidth={2}
-              fillOpacity={1}
-              fill="url(#colorAmount)"
+              fill="#ef4444"
+              radius={[4, 4, 0, 0]}
+              barSize={20}
             />
-          </AreaChart>
+          </BarChart>
         </ResponsiveContainer>
         </div>
       </div>
