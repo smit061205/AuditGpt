@@ -33,16 +33,23 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use("/", routes);
 
-// Serve frontend static files in production
+const fs = require('fs');
+// Serve frontend static files in production if they exist
 const frontendPath = path.join(__dirname, '../../frontend/dist');
-app.use(express.static(frontendPath));
+if (fs.existsSync(frontendPath)) {
+  app.use(express.static(frontendPath));
 
-app.get('*', (req, res, next) => {
-  if (req.originalUrl.startsWith('/api')) {
-    return next();
-  }
-  res.sendFile(path.join(frontendPath, 'index.html'));
-});
+  app.get('*', (req, res, next) => {
+    if (req.originalUrl.startsWith('/api')) {
+      return next();
+    }
+    res.sendFile(path.join(frontendPath, 'index.html'));
+  });
+} else {
+  app.get('/', (req, res) => {
+    res.send('AuditGPT API is running. If you are looking for the UI, visit the frontend deployment.');
+  });
+}
 
 // Error handlers (must be last)
 app.use(notFoundHandler);
