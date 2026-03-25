@@ -113,6 +113,7 @@ router.post("/analyze", async (req, res) => {
       sentiment,
     );
     report.metadata.execution_time_ms = executionTime;
+    report.metadata.data_source = company.dataSource || 'local';
 
     clearTimeout(timeoutHandle);
 

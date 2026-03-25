@@ -35,27 +35,28 @@ class APIFetcher {
       };
     }
 
-    // 2. Check local SEBI DB first — if ticker matches directly, skip Yahoo Finance entirely
+    // 2. Check local SEBI DB first — direct ticker hit (e.g. LTIM.NS, TCS.NS)
+    const fs = require('fs');
+    const path = require('path');
+    const dbPath = path.join(__dirname, '../data/sebi-db.json');
+    let localDb = null;
     try {
-      const fs = require('fs');
-      const path = require('path');
-      const dbPath = path.join(__dirname, '../data/sebi-db.json');
       if (fs.existsSync(dbPath)) {
-        const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-        // Direct ticker hit (e.g., user typed "LTIM.NS" or "TCS.NS")
+        localDb = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
         const upperQ = query.toUpperCase().trim();
-        if (db[upperQ]) {
+        if (localDb[upperQ]) {
           logger.info(`✅ Direct local DB hit for ${upperQ}`);
           return {
             id: upperQ,
-            name: db[upperQ].meta?.name || upperQ,
+            name: localDb[upperQ].meta?.name || upperQ,
             cin: upperQ,
-            industry: db[upperQ].meta?.industry || 'General Industry',
-            exchange: db[upperQ].meta?.exchange || 'NSE',
+            industry: localDb[upperQ].meta?.industry || 'General Industry',
+            exchange: localDb[upperQ].meta?.exchange || 'NSE',
+            dataSource: 'local',
           };
         }
       }
-    } catch(e) { /* fallthrough to Yahoo */ }
+    } catch(e) { localDb = null; }
 
     // 3. Common Name to Ticker Aliases (for easy demoing without '.NS')
     const ALIASES = {
@@ -81,43 +82,67 @@ class APIFetcher {
       }
     }
 
+    // 4. Try Yahoo Finance search first
+    let yahooSymbol = null;
+    let yahooName = query;
+    let yahooInd = 'General Industry';
+    let yahooExch = '';
+
     try {
       const results = await yahooFinance.search(searchQuery);
       const topResult = results.quotes.find(q => q.isYahooFinance && q.quoteType === 'EQUITY')
         || results.quotes.find(q => q.isYahooFinance)
         || results.quotes[0];
 
-      if (!topResult) throw new Error(`No ticker found for "${query}"`);
-
-      // 4. Enrich with local DB metadata if available
-      const fs = require('fs');
-      const path = require('path');
-      const dbPath = path.join(__dirname, '../data/sebi-db.json');
-      let finalName = topResult.longname || topResult.shortname || query;
-      let finalInd = topResult.industry || topResult.sector || 'General Industry';
-      
-      try {
-        if (fs.existsSync(dbPath)) {
-          const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-          if (db[topResult.symbol]) {
-             finalName = db[topResult.symbol].meta?.name || finalName;
-             finalInd = db[topResult.symbol].meta?.industry || finalInd;
-          }
-        }
-      } catch(e) {}
-
-      return {
-        id: topResult.symbol,
-        name: finalName,
-        cin: topResult.symbol,
-        industry: finalInd,
-        exchange: topResult.exchDisp,
-      };
-    } catch (err) {
-      logger.error(`Yahoo Finance search failed for ${query}`, err.message);
-      throw new Error(`Could not find company "${query}". Try using the stock ticker (e.g., AAPL, RELIANCE.NS, TCS.NS)`);
+      if (topResult) {
+        yahooSymbol = topResult.symbol;
+        yahooName = topResult.longname || topResult.shortname || query;
+        yahooInd = topResult.industry || topResult.sector || 'General Industry';
+        yahooExch = topResult.exchDisp || '';
+      }
+    } catch (searchErr) {
+      logger.warn(`Yahoo search failed for ${query}: ${searchErr.message}`);
     }
+
+    // 5. If search returned nothing, try quoteSummary directly (handles tickers like LTIM.NS that search misses)
+    if (!yahooSymbol) {
+      const tickerCandidate = query.toUpperCase().trim();
+      try {
+        logger.info(`📡 Yahoo search missed, trying quoteSummary for ${tickerCandidate}`);
+        const summary = await yahooFinance.quoteSummary(tickerCandidate, {
+          modules: ['financialData', 'summaryProfile']
+        });
+        yahooSymbol = tickerCandidate;
+        yahooName = summary.summaryProfile?.longBusinessSummary
+          ? tickerCandidate  // use ticker as name; longBusinessSummary is too long
+          : tickerCandidate;
+        yahooInd = summary.summaryProfile?.industry || summary.summaryProfile?.sector || 'General Industry';
+      } catch (quoteErr) {
+        logger.error(`Yahoo Finance search failed for ${query}`, quoteErr.message);
+        throw new Error(`Could not find company "${query}". Try using the stock ticker (e.g., AAPL, RELIANCE.NS, TCS.NS)`);
+      }
+    }
+
+    // 6. Enrich name/industry from local DB if we have a match now
+    if (localDb && localDb[yahooSymbol]) {
+      yahooName = localDb[yahooSymbol].meta?.name || yahooName;
+      yahooInd = localDb[yahooSymbol].meta?.industry || yahooInd;
+    }
+
+    // Check if this company is in local DB (88 curated) or will be live from Yahoo
+    const inLocalDb = !!(localDb && localDb[yahooSymbol]);
+    logger.info(`🌐 Yahoo Finance resolved "${query}" → ${yahooSymbol} (${inLocalDb ? 'local DB' : 'live Yahoo'})`);
+
+    return {
+      id: yahooSymbol,
+      name: yahooName,
+      cin: yahooSymbol,
+      industry: yahooInd,
+      exchange: yahooExch,
+      dataSource: inLocalDb ? 'local' : 'yahoo',
+    };
   }
+
 
 
   async fetchFinancialData(symbol) {

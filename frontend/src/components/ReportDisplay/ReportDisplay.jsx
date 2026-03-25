@@ -46,7 +46,19 @@ export default function ReportDisplay({ report, analysisTime }) {
             >
               {fraudRisk?.fraud_risk_score} RISK
             </span>
+            {metadata?.data_source === 'yahoo' ? (
+              <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase"
+                style={{ background: '#0ea5e920', color: '#0ea5e9', border: '1px solid #0ea5e940' }}>
+                📡 Yahoo Live
+              </span>
+            ) : (
+              <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase"
+                style={{ background: '#22c55e20', color: '#22c55e', border: '1px solid #22c55e40' }}>
+                🗄 SEBI DB
+              </span>
+            )}
           </div>
+
 
           <div className="flex flex-wrap gap-4 text-sm text-slate-400">
             {metadata?.cin && (
