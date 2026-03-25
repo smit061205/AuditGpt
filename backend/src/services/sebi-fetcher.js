@@ -35,7 +35,29 @@ class APIFetcher {
       };
     }
 
-    // 2. Common Name to Ticker Aliases (for easy demoing without '.NS')
+    // 2. Check local SEBI DB first — if ticker matches directly, skip Yahoo Finance entirely
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const dbPath = path.join(__dirname, '../data/sebi-db.json');
+      if (fs.existsSync(dbPath)) {
+        const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+        // Direct ticker hit (e.g., user typed "LTIM.NS" or "TCS.NS")
+        const upperQ = query.toUpperCase().trim();
+        if (db[upperQ]) {
+          logger.info(`✅ Direct local DB hit for ${upperQ}`);
+          return {
+            id: upperQ,
+            name: db[upperQ].meta?.name || upperQ,
+            cin: upperQ,
+            industry: db[upperQ].meta?.industry || 'General Industry',
+            exchange: db[upperQ].meta?.exchange || 'NSE',
+          };
+        }
+      }
+    } catch(e) { /* fallthrough to Yahoo */ }
+
+    // 3. Common Name to Ticker Aliases (for easy demoing without '.NS')
     const ALIASES = {
       'reliance': 'RELIANCE.NS',
       'tcs': 'TCS.NS',
@@ -67,7 +89,7 @@ class APIFetcher {
 
       if (!topResult) throw new Error(`No ticker found for "${query}"`);
 
-      // 3. Fallback: Check local SEBI DB if Yahoo Finance is returning generic data
+      // 4. Enrich with local DB metadata if available
       const fs = require('fs');
       const path = require('path');
       const dbPath = path.join(__dirname, '../data/sebi-db.json');
@@ -78,8 +100,8 @@ class APIFetcher {
         if (fs.existsSync(dbPath)) {
           const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
           if (db[topResult.symbol]) {
-             finalName = db[topResult.symbol].name || finalName;
-             finalInd = db[topResult.symbol].industry || finalInd;
+             finalName = db[topResult.symbol].meta?.name || finalName;
+             finalInd = db[topResult.symbol].meta?.industry || finalInd;
           }
         }
       } catch(e) {}
@@ -96,6 +118,7 @@ class APIFetcher {
       throw new Error(`Could not find company "${query}". Try using the stock ticker (e.g., AAPL, RELIANCE.NS, TCS.NS)`);
     }
   }
+
 
   async fetchFinancialData(symbol) {
     logger.info(`Fetching live financial data for ${symbol}`);
