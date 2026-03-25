@@ -38,8 +38,8 @@ function calculateRatios(metrics) {
     equityRatio: safeDivide(equity, totalAssets),
     interestCoverage: safeDivide(operatingIncome, interestExpense || 0),
 
-    // Liquidity
-    currentRatio: safeDivide(currentAssets, currentLiabilities),
+    // Liquidity — fall back to stored metrics.currentRatio if currentAssets/currentLiabilities missing
+    currentRatio: safeDivide(currentAssets, currentLiabilities) ?? (metrics.currentRatio || null),
     quickRatio: safeDivide(
       (currentAssets || 0) - (inventory || 0),
       currentLiabilities,
