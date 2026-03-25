@@ -337,15 +337,29 @@ class APIFetcher {
           
           const peerSector = getSector(company.meta.industry);
           if (peerSector === targetSector || (targetSector === 'other' && lowerInd.split(' ')[0] === (company.meta.industry||'').toLowerCase().split(' ')[0])) {
-            // Get latest year metrics
+            // Get latest and previous year metrics for growth calculation
             if (!company.history || company.history.length === 0) continue;
-            const latest = company.history[company.history.length - 1];
-            
+            const sorted = [...company.history].sort((a, b) => a.year - b.year);
+            const latest = sorted[sorted.length - 1];
+            const previous = sorted.length > 1 ? sorted[sorted.length - 2] : null;
+
+            const computedRatios = calculateRatios(latest.metrics);
+
+            // currentRatio: use computed if available, else fall back to stored value
+            if ((computedRatios.currentRatio == null || isNaN(computedRatios.currentRatio)) && latest.metrics.currentRatio) {
+              computedRatios.currentRatio = latest.metrics.currentRatio;
+            }
+
+            // revenueGrowth: calculate from last two years if available
+            if (previous && previous.metrics.revenue && latest.metrics.revenue) {
+              computedRatios.revenueGrowth = (latest.metrics.revenue - previous.metrics.revenue) / Math.abs(previous.metrics.revenue);
+            }
+
             peers.push({
               id: company.meta.id,
               name: company.meta.name,
               industry: company.meta.industry,
-              metrics: { ...latest.metrics, ...calculateRatios(latest.metrics) }
+              metrics: { ...latest.metrics, ...computedRatios }
             });
             
             if (peers.length >= 5) break; // Limit to 5 peers
