@@ -119,10 +119,10 @@ Analyse this company for GENUINE FRAUD INDICATORS only.
 
 CRITICAL RULES (violating them makes the analysis useless):
 1. Return AT MOST 6 anomalies total. Only the most significant ones.
-2. A metric ABOVE the sector peer MEDIAN is NEVER a fraud anomaly.
+2. A metric ABOVE the sector peer MEDIAN is NEVER a fraud anomaly, UNLESS it is Debt or Related Party Transactions which are bad when high.
 3. Normal business cycles (revenue dips, margin fluctuations ±5%) are NOT fraud.
-4. Only flag a metric that is CLEARLY AND CONSISTENTLY below peer median for 2+ years.
-5. Severity: "Critical" = >50% below peer median for 2+ years. "High" = 25-50% below. "Medium" = 10-25% below. "Low" = minor.
+4. Flag metrics that are CLEARLY below peer median, OR flag severe INTERNAL DIVERGENCES (e.g., Revenue surges but Cash Flow collapses). Internal divergences are CRITICAL independent of peer medians!
+5. Severity: "Critical" = Severe internal divergence OR >50% below peer median. "High" = 25-50% below. "Medium" = 10-25% below.
 6. ${isBank ? 'BANKING/NBFC SPECIFIC: High absolute debt is normal. However, if Cash Flow is violently NEGATIVE while Debt grows, or if Related Party Transactions explode, that is SEVERE FRAUD. Do not ignore negative cash-flows or auditor warnings just because it is a bank.' : 'Flag high debt only if it exceeds the sector peer median by >50% with no revenue growth.'}
 7. EXTREMELY IMPORTANT: If the company has stable positive Cash Flows, clean auditor notes, and consistent profitability — it is a HEALTHY COMPANY. Return {"anomalies": []} and do not invent problems.
 8. Do not flag "revenue growth slowing down" as fraud. That is normal economics.
