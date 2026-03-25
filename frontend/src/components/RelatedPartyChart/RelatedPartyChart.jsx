@@ -40,7 +40,7 @@ export default function RelatedPartyChart({ data }) {
           </span>
         )}
       </div>
-      <div className="flex-1 min-h-[200px] w-full mt-4 overflow-x-auto custom-scrollbar">
+      <div className="w-full h-[250px] mt-4 overflow-x-auto custom-scrollbar">
         <div className="min-w-[500px] h-full">
           <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
