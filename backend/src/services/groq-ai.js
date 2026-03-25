@@ -12,7 +12,7 @@ class GroqAIService {
     // Try Kimi K2 first (1T MoE, best quality). LLaMA 70B as fallback, 8B as last resort.
     // Try both namespaced and short-form IDs because Groq's behavior varies.
     this.MODELS = [
-      "moonshotai/kimi-k2-instruct-0905",
+      "openai/gpt-oss-120b",
       "llama-3.3-70b-versatile",
       "llama-3.1-8b-instant",
     ];
